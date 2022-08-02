@@ -9,34 +9,56 @@ import '../utils.dart';
 import '../controller/story_controller.dart';
 
 class VideoLoader {
-  String url;
+  String? url;
+  String? file;
 
   File? videoFile;
 
-  Map<String, dynamic>? requestHeaders;
+  Map<String, String>? requestHeaders;
 
   LoadState state = LoadState.loading;
 
-  VideoLoader(this.url, {this.requestHeaders});
+  VideoLoader({
+    this.url,
+    this.file,
+    this.requestHeaders,
+  });
 
   void loadVideo(VoidCallback onComplete) {
-    if (this.videoFile != null) {
-      this.state = LoadState.success;
+    if (videoFile != null) {
+      state = LoadState.success;
       onComplete();
     }
 
-    final fileStream = DefaultCacheManager()
-        .getFileStream(this.url, headers: this.requestHeaders as Map<String, String>?);
+    // final fileStream = DefaultCacheManager().getFileStream(this.url,
+    //     headers: this.requestHeaders as Map<String, String>?);
 
-    fileStream.listen((fileResponse) {
-      if (fileResponse is FileInfo) {
-        if (this.videoFile == null) {
-          this.state = LoadState.success;
-          this.videoFile = fileResponse.file;
-          onComplete();
+    // fileStream.listen((fileResponse) {
+    //   if (fileResponse is FileInfo) {
+    //     if (this.videoFile == null) {
+    //       this.state = LoadState.success;
+    //       this.videoFile = fileResponse.file;
+    //       onComplete();
+    //     }
+    //   }
+    // });
+    if (url == null) {
+      state = LoadState.success;
+      videoFile = File(file!);
+      onComplete();
+    } else {
+      final fileStream =
+          DefaultCacheManager().getFileStream(url!, headers: requestHeaders);
+      fileStream.listen((fileResponse) {
+        if (fileResponse is FileInfo) {
+          if (videoFile == null) {
+            state = LoadState.success;
+            videoFile = fileResponse.file;
+            onComplete();
+          }
         }
-      }
-    });
+      });
+    }
   }
 }
 
@@ -47,12 +69,14 @@ class StoryVideo extends StatefulWidget {
   StoryVideo(this.videoLoader, {this.storyController, Key? key})
       : super(key: key ?? UniqueKey());
 
-  static StoryVideo url(String url,
-      {StoryController? controller,
-      Map<String, dynamic>? requestHeaders,
+  static StoryVideo url(
+      {String? url,
+      String? file,
+      StoryController? controller,
+      Map<String, String>? requestHeaders,
       Key? key}) {
     return StoryVideo(
-      VideoLoader(url, requestHeaders: requestHeaders),
+      VideoLoader(url: url, file: file, requestHeaders: requestHeaders),
       storyController: controller,
       key: key,
     );
@@ -79,7 +103,7 @@ class StoryVideoState extends State<StoryVideo> {
 
     widget.videoLoader.loadVideo(() {
       if (widget.videoLoader.state == LoadState.success) {
-        this.playerController =
+        playerController =
             VideoPlayerController.file(widget.videoLoader.videoFile!);
 
         playerController!.initialize().then((v) {
@@ -119,7 +143,7 @@ class StoryVideoState extends State<StoryVideo> {
             child: Container(
               width: 70,
               height: 70,
-              child: CircularProgressIndicator(
+              child: const CircularProgressIndicator(
                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                 strokeWidth: 3,
               ),
